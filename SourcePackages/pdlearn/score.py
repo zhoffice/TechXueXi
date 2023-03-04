@@ -7,6 +7,8 @@ from pdlearn import color
 from pdlearn import file
 from pdlearn.const import const
 import threading
+import time
+import datetime
 
 
 # 总积分
@@ -17,22 +19,22 @@ import threading
 
 def handle_score_color(score, full_score, colorful=True):
     if int(score) < int(full_score) and colorful:
-        return color.red(str(score))+" / "+str(full_score)
+        return color.red(str(score)) + " / " + str(full_score)
     else:
-        return str(score)+" / "+str(full_score)
+        return str(score) + " / " + str(full_score)
 
 
 def show_score(cookies):
     userId, total, scores, userName = get_score(cookies)
-    print(userName+" 当前学 xi 总积分：" + str(total) +
+    print(userName + " 当前学 xi 总积分：" + str(total) +
           "\t" + "今日得分：" + str(scores["today"]))
     print("阅读文章:", handle_score_color(scores["article_num"], const.article_num_all), ",",
           "观看视频:", handle_score_color(
-              scores["video_num"], const.video_num_all), ",",
+            scores["video_num"], const.video_num_all), ",",
           "文章时长:", handle_score_color(
-              scores["article_time"], const.article_time_all), ",",
+            scores["article_time"], const.article_time_all), ",",
           "视频时长:", handle_score_color(
-              scores["video_time"], const.video_time_all), ",",
+            scores["video_time"], const.video_time_all), ",",
           "\n每日登陆:", handle_score_color(scores["login"], const.login_all), ",",
           "每日答题:", handle_score_color(scores["daily"], const.daily_all), ",",
           "每周答题:", handle_score_color(scores["weekly"], const.weekly_all), ",",
@@ -42,7 +44,7 @@ def show_score(cookies):
 
 def show_scorePush(cookies, chat_id=None):
     userId, total, scores, userName = get_score(cookies)
-    globalvar.pushprint(userName+" 当前学 xi 总积分：" + str(total) + "\t" + "今日得分：" + str(scores["today"]) +
+    globalvar.pushprint(userName + " 当前学 xi 总积分：" + str(total) + "\t" + "今日得分：" + str(scores["today"]) +
                         "\n阅读文章:" + handle_score_color(scores["article_num"], const.article_num_all, False) + "," +
                         "观看视频:" + handle_score_color(scores["video_num"], const.video_num_all, False) + "," +
                         "文章时长:" + handle_score_color(scores["article_time"], const.article_time_all, False) + "," +
@@ -63,8 +65,11 @@ def get_score(cookies):
     jar = RequestsCookieJar()
     for cookie in cookies:
         jar.set(cookie['name'], cookie['value'])
-    total_json = requests.get("https://pc-api.xuexi.cn/open/api/score/get", cookies=jar,
-                              headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
+    # total_json = requests.get("https://pc-api.xuexi.cn/open/api/score/get", cookies=jar,
+    #                           headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
+    t = time.time()
+    total_json = requests.get("https://pc-proxy-api.xuexi.cn/delegate/score/get?_t=%d" % (int(round(t * 1000))),
+                              cookies=jar, headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
     if not json.loads(total_json)["data"]:
         globalvar.pushprint("cookie过期，请重新登录", chat_id)
         if chat_id:
@@ -72,7 +77,7 @@ def get_score(cookies):
         raise
 
     total = int(json.loads(total_json)["data"]["score"])
-    #userId = json.loads(total_json)["data"]["userId"]
+    # userId = json.loads(total_json)["data"]["userId"]
     user_info = requests.get("https://pc-api.xuexi.cn/open/api/user/info", cookies=jar,
                              headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
     userId = json.loads(user_info)["data"]["uid"]
@@ -83,7 +88,8 @@ def get_score(cookies):
     #                          headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
     today = 0
     # today = int(json.loads(today_json)["data"]["score"])
-    score_json = requests.get("https://pc-proxy-api.xuexi.cn/api/score/days/listScoreProgress?sence=score&deviceType=2", cookies=jar,
+    score_json = requests.get("https://pc-proxy-api.xuexi.cn/api/score/days/listScoreProgress?sence=score&deviceType=2",
+                              cookies=jar,
                               headers={'Cache-Control': 'no-cache'}).content.decode("utf8")
     dayScoreDtos = json.loads(score_json)["data"]
     today = dayScoreDtos["totalScore"]
@@ -93,7 +99,7 @@ def get_score(cookies):
         for j in range(len(rule_list)):
             if str(rule_list[j]) in i["taskCode"]:
                 score_list[j] = int(
-                    int(i["currentScore"])/len(i["taskCode"]))
+                    int(i["currentScore"]) / len(i["taskCode"]))
     # 阅读文章，视听学 xi ，登录，文章时长，视听学 xi 时长，每日答题，每周答题，专项答题
     scores = {}
     scores["article_num"] = score_list[0]  # 0阅读文章
@@ -105,7 +111,7 @@ def get_score(cookies):
     scores["weekly"] = score_list[6]  # 3每周答题
     scores["zhuanxiang"] = score_list[7]  # 4专项答题
 
-    scores["today"] = today         # 8今日得分
+    scores["today"] = today  # 8今日得分
     return userId, total, scores, userName
 
 

@@ -4,6 +4,7 @@ import sys
 import time
 from sys import argv
 
+from webServerConf import app
 from pdlearn import boot
 
 boot.check_environment()
@@ -40,88 +41,89 @@ def get_argv():
 
 
 def start_learn(uid, name):
-    #  0 读取版本信息
-    start_time = time.time()
-    nohead, lock, stime, Single = get_argv()
-    print("是否无头模式：{0} {1}".format(nohead, os.getenv('Nohead')))
-    cookies = user.get_cookie(uid)
-    if nohead == True:
-        TechXueXi_mode = "3"
-    else:
-        TechXueXi_mode = str(cfg_get("base.ModeType", 3))
-        print("当前选择模式：" + TechXueXi_mode + "\n" + "=" * 60)
-
-    if not name:
-        user_fullname = user.get_fullname(uid)
-        name = user_fullname.split('_', 1)[1]
-    else:
-        user_fullname = uid+"_"+name
-
-    if not cookies or TechXueXi_mode == "0":
-        msg = ""
-        if name == "新用户":
-            msg = "需要增加新用户，请扫码登录，否则请无视"
+    with app.app_context():
+        #  0 读取版本信息
+        start_time = time.time()
+        nohead, lock, stime, Single = get_argv()
+        print("是否无头模式：{0} {1}".format(nohead, os.getenv('Nohead')))
+        cookies = user.get_cookie(uid)
+        if nohead == True:
+            TechXueXi_mode = "3"
         else:
-            msg = name+" 登录信息失效，请重新扫码"
-        # print(msg)
-        gl.pushprint(msg, chat_id=uid)
-        if gl.pushmode == "6":
-            gl.pushprint("web模式跳过自动获取二维码,请手动点击添加按钮", chat_id=uid)
-            print(color.red("【#️⃣】 若直接退出请运行：webserverListener.py"))
-            return
-        driver_login = Mydriver()
-        cookies = driver_login.login()
-        driver_login.quit()
-        # cookies = login()
-        if not cookies:
-            print("登录超时")
-            return
-        user.save_cookies(cookies)
-        uid = user.get_userId(cookies)
-        user_fullname = user.get_fullname(uid)
-        name = user_fullname.split('_', 1)[1]
-        user.update_last_user(uid)
-    output = name + " 登录正常，开始学习...\n"
+            TechXueXi_mode = str(cfg_get("base.ModeType", 3))
+            print("当前选择模式：" + TechXueXi_mode + "\n" + "=" * 60)
 
-    article_index = user.get_article_index(uid)
-    video_index = 1  # user.get_video_index(uid)
+        if not name:
+            user_fullname = user.get_fullname(uid)
+            name = user_fullname.split('_', 1)[1]
+        else:
+            user_fullname = uid+"_"+name
 
-    total, scores = show_score(cookies)
-    gl.pushprint(output, chat_id=uid)
-    if TechXueXi_mode in ["1", "3"]:
+        if not cookies or TechXueXi_mode == "0":
+            msg = ""
+            if name == "新用户":
+                msg = "需要增加新用户，请扫码登录，否则请无视"
+            else:
+                msg = name+" 登录信息失效，请重新扫码"
+            # print(msg)
+            gl.pushprint(msg, chat_id=uid)
+            if gl.pushmode == "6":
+                gl.pushprint("web模式跳过自动获取二维码,请手动点击添加按钮", chat_id=uid)
+                print(color.red("【#️⃣】 若直接退出请运行：webserverListener.py"))
+                return
+            driver_login = Mydriver()
+            cookies = driver_login.login()
+            driver_login.quit()
+            # cookies = login()
+            if not cookies:
+                print("登录超时")
+                return
+            user.save_cookies(cookies)
+            uid = user.get_userId(cookies)
+            user_fullname = user.get_fullname(uid)
+            name = user_fullname.split('_', 1)[1]
+            user.update_last_user(uid)
+        output = name + " 登录正常，开始学习...\n"
 
-        article_thread = threads.MyThread(
-            "文章学 xi ", article, uid, cookies, article_index, scores, lock=lock)
-        video_thread = threads.MyThread(
-            "视频学 xi ", video, uid, cookies, video_index, scores, lock=lock)
-        article_thread.start()
-        video_thread.start()
-        article_thread.join()
-        video_thread.join()
-    if TechXueXi_mode in ["2", "3"]:
-        print('开始每日答题……')
-        daily(cookies, scores)
-        print('开始每周答题……')
-        weekly(cookies, scores)
-        if nohead != True or gl.zhuanxiang == True:
-            print('开始专项答题……')
-            zhuanxiang(cookies, scores)
+        article_index = user.get_article_index(uid)
+        video_index = 1  # user.get_video_index(uid)
 
-    if TechXueXi_mode == "4":
-        user.select_user()
-    if TechXueXi_mode == "5":
-        user.refresh_all_cookies(display_score=True)
-    if TechXueXi_mode == "6":
-        user.refresh_all_cookies(live_time=11.90)
+        total, scores = show_score(cookies)
+        gl.pushprint(output, chat_id=uid)
+        if TechXueXi_mode in ["1", "3"]:
 
-    seconds_used = int(time.time() - start_time)
-    gl.pushprint(name+" 总计用时 " + str(math.floor(seconds_used / 60)) +
-                 " 分 " + str(seconds_used % 60) + " 秒", chat_id=uid)
-    show_scorePush(cookies, chat_id=uid)
-    try:
-        user.shutdown(stime)
-    except Exception as e:
-        pass
+            article_thread = threads.MyThread(
+                "文章学 xi ", article, uid, cookies, article_index, scores, lock=lock)
+            video_thread = threads.MyThread(
+                "视频学 xi ", video, uid, cookies, video_index, scores, lock=lock)
+            article_thread.start()
+            video_thread.start()
+            article_thread.join()
+            video_thread.join()
+        if TechXueXi_mode in ["2", "3"]:
+            print('开始每日答题……')
+            daily(cookies, scores)
+            print('开始每周答题……')
+            weekly(cookies, scores)
+            if nohead != True or gl.zhuanxiang == True:
+                print('开始专项答题……')
+                zhuanxiang(cookies, scores)
+
+        if TechXueXi_mode == "4":
+            user.select_user()
+        if TechXueXi_mode == "5":
+            user.refresh_all_cookies(display_score=True)
+        if TechXueXi_mode == "6":
+            user.refresh_all_cookies(live_time=11.90)
+
+        seconds_used = int(time.time() - start_time)
+        gl.pushprint(name+" 总计用时 " + str(math.floor(seconds_used / 60)) +
+                     " 分 " + str(seconds_used % 60) + " 秒", chat_id=uid)
+        show_scorePush(cookies, chat_id=uid)
+        try:
+            user.shutdown(stime)
+        except Exception as e:
+            pass
 
 
 def start(nick_name=None):
