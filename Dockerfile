@@ -25,7 +25,7 @@ RUN cd /xuexi/; \
   dpkg -i google-chrome-stable_110.0.5481.177-1_amd64.deb; \
   apt-get -fy install; \
   google-chrome --version; \
-  rm -f google-chrome-stable_92.0.4515.159-1_amd64.deb
+  rm -f google-chrome-stable_110.0.5481.177-1_amd64.deb
 RUN cd /xuexi/; \
   wget -O chromedriver_linux64_110.0.5481.77.zip http://npm.taobao.org/mirrors/chromedriver/110.0.5481.77/chromedriver_linux64.zip; \
   unzip chromedriver_linux64_110.0.5481.77.zip; \
